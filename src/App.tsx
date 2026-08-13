@@ -41,6 +41,9 @@ function App() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedColor, setSelectedColor] = useState(colors[0]);
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
 
   useEffect(() => {
     localStorage.setItem("notes", JSON.stringify(notes));
@@ -79,11 +82,32 @@ function App() {
     );
   }
 
+  function saveEditedNote(id: number) {
+    setNotes((previousNotes) =>
+      previousNotes.map((note) =>
+        note.id === id
+          ? { ...note, title: editTitle, description: editDescription }
+          : note
+      )
+    );
+    setIsEditingNote(false);
+  }
+
+  function eraseLastNote() {
+    if (notes.length === 0) return;
+    const lastNoteId = notes[notes.length - 1].id;
+    setNotes((previousNotes) => previousNotes.slice(0, -1));
+    setSelectedNoteId((previousSelectedId) =>
+      previousSelectedId === lastNoteId ? null : previousSelectedId
+    );
+  }
+
   function addRandomNote() {
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
     const newNote: Note = {
       id: nextId,
+      title: `ملاحظة عشوائية رقم ${nextId}`,
       createdAt: new Date().toLocaleString("fr-FR"),
       description: `هذا محتوى تجريبي للملاحظة رقم ${nextId}`,
       color: randomColor,
@@ -107,6 +131,10 @@ function App() {
 
         <button className="random-button" onClick={addRandomNote}>
           إضافة عشوائية
+        </button>
+
+        <button className="erase-button" onClick={eraseLastNote}>
+          مسح
         </button>
       </header>
 
@@ -167,16 +195,17 @@ function App() {
             className="note-card"
             key={note.id}
             style={{ backgroundColor: note.color }}
-            onClick={() =>
+            onClick={() => {
               setSelectedNoteId(
                 selectedNoteId === note.id ? null : note.id
-              )
-            }
+              );
+              setIsEditingNote(false);
+            }}
           >
-            <h2>العنوان رقم {note.id}</h2>
+            <h2>الملاحظة رقم {note.id}</h2>
             <h2>{note.title}</h2>
-            <p>{note.createdAt}</p>
             <p>{note.description}</p>
+            <p>{note.createdAt}</p>
           </article>
         ))}
       </section>
@@ -185,33 +214,87 @@ function App() {
         <div className="view-overlay">
           {notes
             .filter((note) => note.id === selectedNoteId)
-            .map((note) => (
-              <article
-                className="selected-note"
-                key={note.id}
-                style={{ backgroundColor: note.color }}
-              >
-                <h2>العنوان رقم {note.id}</h2>
-                <h2>{note.title}</h2>
-                <p>{note.createdAt}</p>
-                <p>{note.description}</p>
-
-                <button
-                  onClick={() => {
-                    deleteNote(note.id);
-                    setSelectedNoteId(null);
-                  }}
+            .map((note) =>
+              isEditingNote ? (
+                <article
+                  className="selected-note"
+                  key={note.id}
+                  style={{ backgroundColor: note.color }}
                 >
-                  حذف
-                </button>
+                  <h2>تعديل الملاحظة رقم {note.id}</h2>
 
-                <button
-                  onClick={() => setSelectedNoteId(null)}
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(event) => setEditTitle(event.target.value)}
+                  />
+
+                  <textarea
+                    value={editDescription}
+                    onChange={(event) =>
+                      setEditDescription(event.target.value)
+                    }
+                  />
+
+                  <p>{note.createdAt}</p>
+
+                  <button onClick={() => saveEditedNote(note.id)}>
+                    حفظ التغييرات
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      deleteNote(note.id);
+                      setSelectedNoteId(null);
+                    }}
+                  >
+                    حذف
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedNoteId(null)}
+                  >
+                    إغلاق
+                  </button>
+                </article>
+              ) : (
+                <article
+                  className="selected-note"
+                  key={note.id}
+                  style={{ backgroundColor: note.color }}
                 >
-                  إغلاق
-                </button>
-              </article>
-            ))}
+                  <h2>الملاحظة رقم {note.id}</h2>
+                  <h2>{note.title}</h2>
+                  <p>{note.description}</p>
+                  <p>{note.createdAt}</p>
+
+                  <button
+                    onClick={() => {
+                      setIsEditingNote(true);
+                      setEditTitle(note.title);
+                      setEditDescription(note.description);
+                    }}
+                  >
+                    تعديل
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      deleteNote(note.id);
+                      setSelectedNoteId(null);
+                    }}
+                  >
+                    حذف
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedNoteId(null)}
+                  >
+                    إغلاق
+                  </button>
+                </article>
+              )
+            )}
         </div>
       )}
     </main>
